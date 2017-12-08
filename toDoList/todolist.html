@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>To do list</title>
+    <script src="js/react.development.js"></script>
+    <script src="js/react-dom.development.js"></script>
+    <script src="js/babel.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="css/todolist.css">
+</head>
+<body>
+	<div id='toDoList'></div>
+	<script type="text/javascript">
+		
+	</script>
+	<script type="text/babel">
+		class Header extends React.Component {
+			constructor(...props) {
+				super(...props);
+				
+				//state
+				this.state = {
+					todoArr: []
+				}
+
+				//事件
+				this.submitToDo = this.submitToDo.bind(this);
+			}
+
+			//enter回车事件绑定
+			submitToDo(e) {
+				if((e.keyCode || e.which) == 13) {
+					//绑定enter事件
+					let title = document.getElementById('title');
+					this.state.todoArr.push(title.value);
+
+					this.setState({
+						todoArr : this.state.todoArr
+					})
+        			this.props.getData(this.state.todoArr);
+				}
+			}
+
+			render() {
+				return 	<header>
+							<section>
+								<label htmlFor="title">{this.props.title}</label>
+								<input type="text" id="title" placeholder={this.props.placeholder} onKeyDown={this.submitToDo}/>
+							</section>
+						</header>
+			}
+		}
+
+		class List extends React.Component {
+			constructor(...props) {
+				super(...props);
+				
+				//state
+				this.state = {
+					donearr: [],
+					tododarr: []
+				}
+
+				//事件
+				this.changeHandler = this.changeHandler.bind(this);
+				this.delete = this.delete.bind(this);
+			}
+
+			componentWillReceiveProps( nextProps ) {
+				if(nextProps.className == 'todo') {
+					this.setState({
+						tododarr: nextProps.listdata
+					})
+				} else if(nextProps.className == 'done'){
+					//这里每次勾选复选框的时候，数据居然是空的，需要在这里赋值
+					this.setState({
+						donearr: nextProps.listdata,
+						tododarr: nextProps.otherdata
+					})
+				}
+				
+			}
+			
+			//给复选框绑定事件
+			changeHandler(e) {
+				let input = e.target;
+				let index = input.attributes['index'].value;
+				let pclassname = input.parentNode.attributes['class'].value;
+				if(input.checked) {
+					if(pclassname == 'todo') {
+						this.state.donearr.push(input.value);
+						this.state.tododarr.splice(index, 1);
+	        		} else if(pclassname == 'done') {
+						this.state.donearr.splice(index, 1);
+						this.state.tododarr.push(input.value);
+		        	}
+        			input.checked = false;
+		        	this.setState({
+						donearr: this.state.donearr,
+						tododarr: this.state.tododarr
+					});
+        			this.props.getDoneData(this.state.donearr);
+        			this.props.getToDoData(this.state.tododarr);
+				}
+
+			}
+
+			//删除按钮
+			delete(e) {
+				let a = e.target;
+				let index = a.attributes['index'].value;
+				let pclassname = a.parentNode.attributes['class'].value;
+				if(pclassname == 'todo') {
+					this.state.tododarr.splice(index, 1);
+					this.props.getToDoData(this.state.tododarr);
+
+				} else if(pclassname == 'done') {
+					this.state.donearr.splice(index, 1);
+					this.props.getDoneData(this.state.donearr);
+				}
+			}
+
+			render() {
+				return 	<ol>
+							{
+								this.props.listdata.map((item, index) => {
+									return 	<li key={index}  className={this.props.className}>
+												<input index={index} type="checkbox" onChange={this.changeHandler} value={item}/>
+												<p>{item}</p>
+												<a index={index} onClick={this.delete} href="javascript:;">×</a>
+											</li>		
+								})
+							}
+						</ol>
+			}
+		}
+
+		class Section extends React.Component {
+			render() {
+				return 	<section>
+							<div className={this.props.className}>
+								<h2>
+									<span>{this.props.name}</span>
+									<span className="count">{this.props.listdata.length}</span>
+								</h2>
+								<List listdata={this.props.listdata} otherdata={this.props.otherdata}  getToDoData={this.props.getToDoData} getDoneData={this.props.getDoneData} className={this.props.className}/>
+							</div>
+						</section>
+			}
+		}
+
+		class ToList extends React.Component {
+			constructor(...props) {
+				super(...props);
+
+				//state
+				this.state = {
+					todoData: [],
+					doneData: []
+				}
+				
+				//事件
+				this.getToDoData = this.getToDoData.bind(this);
+				this.getDoneData = this.getDoneData.bind(this);
+			}
+
+			//获取待完成数据
+			getToDoData(data) {
+				this.state.todoData = data;
+				this.setState({
+					todoData: this.state.todoData
+				})
+			}
+
+			//获已完成数据
+			getDoneData(data) {
+				this.state.doneData = data;
+				this.setState({
+					doneData: this.state.doneData
+				})
+			}
+			render() {
+				//listdata是列表要显示的内容，写到后面发现两个section的数据并不是同一个。所以还要传otherdata，用来给List组件的donearr和todoarr赋值
+				return 	<div>
+							<Header title={this.props.title} placeholder={this.props.placeholder} getData={this.getToDoData}/>
+							<Section name={"正在进行"} className="todo" listdata={this.state.todoData} otherdata={this.state.doneData} getToDoData={this.getToDoData} getDoneData={this.getDoneData}/>
+							<Section name={"已完成"} className="done" listdata={this.state.doneData} listdata={this.state.doneData} otherdata={this.state.todoData} getToDoData={this.getToDoData} getDoneData={this.getDoneData}/>
+							<footer></footer>
+						</div>
+			}
+		}
+		ReactDOM.render(
+			<ToList title={'ToDoList'} placeholder={"添加ToDo"}/>,
+			document.getElementById('toDoList')
+		);
+	</script>
+</body>
+</html>
